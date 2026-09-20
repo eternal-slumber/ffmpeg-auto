@@ -1,0 +1,8 @@
+.DS_Store
+*.mp4
+*.MP4
+
+storage/incoming/*
+!storage/incoming/.gitkeep
+storage/output/*
+!storage/output/.gitkeep
