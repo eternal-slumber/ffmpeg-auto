@@ -7,10 +7,7 @@ import (
 	"os"
 	"strconv"
 
-	"content-factory/internal/media"
-	"content-factory/internal/model"
-	"content-factory/internal/planner"
-	"content-factory/internal/renderer"
+	"content-factory/internal/factory"
 )
 
 func main() {
@@ -36,51 +33,11 @@ func main() {
 		outputPath = os.Args[4]
 	}
 
-	ctx := context.Background()
-	prober := media.FFProbe{}
-	source, err := prober.Probe(ctx, sourcePath)
+	result, err := factory.Run(context.Background(), sourcePath, bannerPath, outputPath, parts)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	banner, err := prober.Probe(ctx, bannerPath)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	if !source.HasAudio || !banner.HasAudio {
-		fmt.Fprintln(os.Stderr, "source and banner must contain audio")
-		os.Exit(1)
-	}
-	clips, err := planner.EqualSplit(source.Duration, parts)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	for i := range clips {
-		clips[i].Interruptions, err = planner.PlanInterruptions(clips[i].Duration, banner.Duration)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	}
-	if err := (renderer.FFmpeg{}).Render(ctx, sourcePath, bannerPath, outputPath, clips[0]); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	rendered, err := prober.Probe(ctx, outputPath)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-
-	result := struct {
-		Source       model.MediaMetadata `json:"source"`
-		Banner       model.MediaMetadata `json:"banner"`
-		Clips        []model.ClipPlan    `json:"clips"`
-		RenderedPath string              `json:"rendered_path"`
-		Rendered     model.MediaMetadata `json:"rendered"`
-	}{source, banner, clips, outputPath, rendered}
 	if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

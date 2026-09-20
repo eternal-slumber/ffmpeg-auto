@@ -15,6 +15,13 @@ go run ./cmd/api
 # or: go run ./cmd/api /path/to/video.mp4 10 /path/to/banner.mp4 /path/to/output.mp4
 ```
 
+Debug UI:
+
+```sh
+go run ./cmd/web
+# open http://127.0.0.1:8080
+```
+
 Defaults: `storage/incoming/source.mp4`, 10 clips, and
 `storage/incoming/banner.mp4`. The first clip is written to
 `storage/output/clip-001.mp4`.
