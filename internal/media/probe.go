@@ -81,9 +81,9 @@ func parseProbeOutput(data []byte) (model.MediaMetadata, error) {
 			metadata.VideoCodec = stream.CodecName
 			metadata.Width = stream.Width
 			metadata.Height = stream.Height
-			fps := stream.AvgFrameRate
+			fps := stream.RFrameRate
 			if fps == "" || fps == "0/0" {
-				fps = stream.RFrameRate
+				fps = stream.AvgFrameRate
 			}
 			if fps != "" && fps != "0/0" {
 				var err error

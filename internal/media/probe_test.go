@@ -26,14 +26,14 @@ func TestParseProbeOutput(t *testing.T) {
 	}
 }
 
-func TestParseProbeOutputFallsBackToRealFrameRate(t *testing.T) {
-	data := []byte(`{"streams":[{"codec_type":"video","r_frame_rate":"25/1"}],"format":{}}`)
+func TestParseProbeOutputPrefersRealFrameRate(t *testing.T) {
+	data := []byte(`{"streams":[{"codec_type":"video","r_frame_rate":"60/1","avg_frame_rate":"205100/3417"}],"format":{}}`)
 
 	got, err := parseProbeOutput(data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.FPS != 25 || got.HasAudio {
+	if got.FPS != 60 || got.HasAudio {
 		t.Fatalf("unexpected metadata: %+v", got)
 	}
 }
