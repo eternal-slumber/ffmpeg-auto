@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"content-factory/internal/factory"
@@ -22,10 +23,13 @@ import (
 var pageHTML string
 
 type server struct {
-	incomingDir string
-	outputPath  string
-	page        *template.Template
-	renderMu    sync.Mutex
+	incomingDir   string
+	outputPath    string
+	page          *template.Template
+	renderMu      sync.Mutex
+	rendering     atomic.Bool
+	progressDone  atomic.Int64
+	progressTotal atomic.Int64
 }
 
 type pageData struct {
@@ -53,6 +57,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", s.index)
 	mux.HandleFunc("POST /render", s.render)
+	mux.HandleFunc("GET /progress", s.progress)
 	mux.HandleFunc("GET /output/{name}", s.output)
 
 	addr := os.Getenv("CONTENT_FACTORY_ADDR")
@@ -101,7 +106,14 @@ func (s *server) render(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.renderMu.Lock()
-	result, err := factory.Run(r.Context(), sourcePath, bannerPath, s.outputPath, parts)
+	s.rendering.Store(true)
+	s.progressDone.Store(0)
+	s.progressTotal.Store(int64(parts))
+	result, err := factory.RunWithProgress(r.Context(), sourcePath, bannerPath, s.outputPath, parts, func(done, total int) {
+		s.progressDone.Store(int64(done))
+		s.progressTotal.Store(int64(total))
+	})
+	s.rendering.Store(false)
 	s.renderMu.Unlock()
 	if err != nil {
 		data.Error = err.Error()
@@ -124,6 +136,15 @@ func (s *server) render(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	s.renderPage(w, http.StatusOK, data)
+}
+
+func (s *server) progress(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"running": s.rendering.Load(),
+		"done":    s.progressDone.Load(),
+		"total":   s.progressTotal.Load(),
+	})
 }
 
 func (s *server) output(w http.ResponseWriter, r *http.Request) {

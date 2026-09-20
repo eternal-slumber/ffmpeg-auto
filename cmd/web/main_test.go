@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -31,5 +33,26 @@ func TestResolveMediaAndList(t *testing.T) {
 	}
 	if !reflect.DeepEqual(files, []string{"source.mp4"}) {
 		t.Fatalf("mediaFiles() = %#v", files)
+	}
+}
+
+func TestProgress(t *testing.T) {
+	s := &server{}
+	s.rendering.Store(true)
+	s.progressDone.Store(2)
+	s.progressTotal.Store(5)
+	recorder := httptest.NewRecorder()
+	s.progress(recorder, httptest.NewRequest("GET", "/progress", nil))
+
+	var got struct {
+		Running bool  `json:"running"`
+		Done    int64 `json:"done"`
+		Total   int64 `json:"total"`
+	}
+	if err := json.NewDecoder(recorder.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if !got.Running || got.Done != 2 || got.Total != 5 {
+		t.Fatalf("progress = %+v", got)
 	}
 }

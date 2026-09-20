@@ -26,6 +26,10 @@ type Output struct {
 }
 
 func Run(ctx context.Context, sourcePath, bannerPath, outputPath string, parts int) (Result, error) {
+	return RunWithProgress(ctx, sourcePath, bannerPath, outputPath, parts, nil)
+}
+
+func RunWithProgress(ctx context.Context, sourcePath, bannerPath, outputPath string, parts int, progress func(done, total int)) (Result, error) {
 	prober := media.FFProbe{}
 	source, err := prober.Probe(ctx, sourcePath)
 	if err != nil {
@@ -60,6 +64,9 @@ func Run(ctx context.Context, sourcePath, bannerPath, outputPath string, parts i
 			return Result{}, fmt.Errorf("probe clip %d: %w", clip.Number, err)
 		}
 		outputs[i] = Output{Number: clip.Number, Path: path, Metadata: metadata}
+		if progress != nil {
+			progress(i+1, len(clips))
+		}
 	}
 	return Result{
 		Source:  source,

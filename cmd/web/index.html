@@ -13,6 +13,9 @@
     label { display: grid; gap: 5px; font-weight: 600; }
     select, input, button { min-height: 40px; padding: 8px 10px; border: 1px solid #bbb; border-radius: 6px; font: inherit; background: white; }
     button { padding-inline: 18px; border-color: #222; color: white; background: #222; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    #progress { margin-top: 18px; }
+    progress { display: block; width: 100%; height: 18px; margin-top: 6px; }
     .error { margin-bottom: 18px; padding: 10px 12px; color: #8b0000; background: #ffeaea; border-radius: 6px; }
     .meta { margin: 10px 0 18px; color: #555; }
     .outputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
@@ -50,6 +53,11 @@
     <button type="submit">Рендер</button>
   </form>
 
+  <div id="progress" role="status" aria-live="polite" hidden>
+    <span>Готово 0 из 0</span>
+    <progress value="0" max="1"></progress>
+  </div>
+
   {{if .Result}}
     <h2>Результаты</h2>
     <div class="outputs">
@@ -85,5 +93,43 @@
       <pre>{{.ResultJSON}}</pre>
     </details>
   {{end}}
+  <script>
+    const form = document.querySelector("form");
+    const box = document.querySelector("#progress");
+    const text = box.querySelector("span");
+    const bar = box.querySelector("progress");
+    const button = form.querySelector("button");
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const total = Number(form.elements.parts.value);
+      box.hidden = false;
+      text.textContent = `Готово 0 из ${total}`;
+      bar.value = 0;
+      bar.max = total;
+      button.disabled = true;
+
+      const update = async () => {
+        const state = await fetch("/progress", {cache: "no-store"}).then(response => response.json());
+        text.textContent = `Готово ${state.done} из ${state.total || total}`;
+        bar.value = state.done;
+        bar.max = state.total || total;
+      };
+      const timer = setInterval(() => update().catch(() => {}), 500);
+
+      try {
+        const response = await fetch(form.action, {method: "POST", body: new FormData(form)});
+        const html = await response.text();
+        document.open();
+        document.write(html);
+        document.close();
+      } catch (error) {
+        text.textContent = error.message;
+        button.disabled = false;
+      } finally {
+        clearInterval(timer);
+      }
+    });
+  </script>
 </body>
 </html>

@@ -22,6 +22,6 @@ go run ./cmd/web
 Defaults: `storage/incoming/source.mp4`, 10 clips, and
 `storage/incoming/banner.mp4`. Results are written to
 `storage/output/clip-001.mp4` through `clip-010.mp4`. The debug UI previews all
-rendered clips.
+rendered clips and shows live batch progress.
 
 See `PROJECT.md` for the end-to-end description and development log.
