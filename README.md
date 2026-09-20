@@ -1,11 +1,8 @@
 # Content Factory
 
-Stage 1 reads media metadata through the system `ffprobe` executable. Stage 2
-splits the detected duration into an equal clip plan. Stage 3 probes the banner
-and adds its insertion points to every clip. Stage 4 renders the first planned
-clip to MP4 and verifies it with `ffprobe`. Stage 5 normalizes that clip to
-TikTok-ready `1080x1920` with a blurred background. Stage 6 inserts the banner
-with chroma key, freeze-frame, banner audio, and source resume.
+The application probes source and banner media, splits the source into equal
+parts, inserts the banner with chroma key and a source freeze, and renders every
+planned clip as a TikTok-ready `1080x1920` MP4.
 
 Requirements: Go 1.22+ and FFmpeg/ffprobe available in `PATH` on macOS or Linux.
 
@@ -23,7 +20,8 @@ go run ./cmd/web
 ```
 
 Defaults: `storage/incoming/source.mp4`, 10 clips, and
-`storage/incoming/banner.mp4`. The first clip is written to
-`storage/output/clip-001.mp4`.
+`storage/incoming/banner.mp4`. Results are written to
+`storage/output/clip-001.mp4` through `clip-010.mp4`. The debug UI previews all
+rendered clips.
 
 See `PROJECT.md` for the end-to-end description and development log.

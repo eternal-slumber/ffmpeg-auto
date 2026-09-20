@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -33,9 +34,14 @@ type pageData struct {
 	Banner     string
 	Parts      int
 	Result     *factory.Result
+	Outputs    []outputView
 	ResultJSON string
-	VideoURL   string
 	Error      string
+}
+
+type outputView struct {
+	factory.Output
+	URL string
 }
 
 func main() {
@@ -47,7 +53,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", s.index)
 	mux.HandleFunc("POST /render", s.render)
-	mux.HandleFunc("GET /output/clip-001.mp4", s.output)
+	mux.HandleFunc("GET /output/{name}", s.output)
 
 	addr := os.Getenv("CONTENT_FACTORY_ADDR")
 	if addr == "" {
@@ -110,13 +116,24 @@ func (s *server) render(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Result = &result
 	data.ResultJSON = string(encoded)
-	data.VideoURL = "/output/clip-001.mp4?v=" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	stamp := strconv.FormatInt(time.Now().UnixNano(), 10)
+	for _, output := range result.Outputs {
+		data.Outputs = append(data.Outputs, outputView{
+			Output: output,
+			URL:    "/output/" + url.PathEscape(filepath.Base(output.Path)) + "?v=" + stamp,
+		})
+	}
 	s.renderPage(w, http.StatusOK, data)
 }
 
 func (s *server) output(w http.ResponseWriter, r *http.Request) {
+	path, err := resolveMedia(filepath.Dir(s.outputPath), r.PathValue("name"))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
 	w.Header().Set("Cache-Control", "no-store")
-	http.ServeFile(w, r, s.outputPath)
+	http.ServeFile(w, r, path)
 }
 
 func (s *server) defaults() pageData {
