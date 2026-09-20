@@ -48,6 +48,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	if !source.HasAudio || !banner.HasAudio {
+		fmt.Fprintln(os.Stderr, "source and banner must contain audio")
+		os.Exit(1)
+	}
 	clips, err := planner.EqualSplit(source.Duration, parts)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -60,7 +64,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	if err := (renderer.FFmpeg{}).Render(ctx, sourcePath, outputPath, clips[0]); err != nil {
+	if err := (renderer.FFmpeg{}).Render(ctx, sourcePath, bannerPath, outputPath, clips[0]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
