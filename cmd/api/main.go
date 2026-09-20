@@ -10,6 +10,7 @@ import (
 	"content-factory/internal/media"
 	"content-factory/internal/model"
 	"content-factory/internal/planner"
+	"content-factory/internal/renderer"
 )
 
 func main() {
@@ -30,14 +31,19 @@ func main() {
 	if len(os.Args) > 3 {
 		bannerPath = os.Args[3]
 	}
+	outputPath := "storage/output/clip-001.mp4"
+	if len(os.Args) > 4 {
+		outputPath = os.Args[4]
+	}
 
+	ctx := context.Background()
 	prober := media.FFProbe{}
-	source, err := prober.Probe(context.Background(), sourcePath)
+	source, err := prober.Probe(ctx, sourcePath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	banner, err := prober.Probe(context.Background(), bannerPath)
+	banner, err := prober.Probe(ctx, bannerPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -54,12 +60,23 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	if err := (renderer.FFmpeg{}).Render(ctx, sourcePath, outputPath, clips[0]); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	rendered, err := prober.Probe(ctx, outputPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 
 	result := struct {
-		Source model.MediaMetadata `json:"source"`
-		Banner model.MediaMetadata `json:"banner"`
-		Clips  []model.ClipPlan    `json:"clips"`
-	}{source, banner, clips}
+		Source       model.MediaMetadata `json:"source"`
+		Banner       model.MediaMetadata `json:"banner"`
+		Clips        []model.ClipPlan    `json:"clips"`
+		RenderedPath string              `json:"rendered_path"`
+		Rendered     model.MediaMetadata `json:"rendered"`
+	}{source, banner, clips, outputPath, rendered}
 	if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
